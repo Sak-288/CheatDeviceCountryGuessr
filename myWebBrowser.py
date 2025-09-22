@@ -27,7 +27,7 @@ with sync_playwright() as p:
         ex_val.replace(']', "")
         ex_val.replace('[', "")
         ex_val.replace('"', "")
-        print(f'This is EX VALUE : {ex_value}')
+        print(f'This is EX VALUE : {ex_val}')
         if not value:
             print('No country has been submitted yet')
         else:
