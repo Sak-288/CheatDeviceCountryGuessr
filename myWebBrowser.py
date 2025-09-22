@@ -8,6 +8,8 @@ import os
 # Resetting STATE Files
 if os.path.exists("circles.json"):
     os.remove("circles.json")
+if os.path.exists("map.html"):
+    os.remove("map.html")
 
 # Constants
 URL = "https://countryguessr.mrdo.fr"
