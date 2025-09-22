@@ -1,11 +1,13 @@
 from playwright.sync_api import sync_playwright
 import pycountry
 from time import *
+from testing_folium import draw_country_circle
 
 # Setting up constants
 URL = "https://countryguessr.mrdo.fr"
-refresh_timeout_ms = 10000
-timeout_s = 3
+refresh_timeout_ms = 2000
+timeout_s = 2
+current = None
 
 print("Launching Chromium...")
 with sync_playwright() as p:
@@ -21,22 +23,40 @@ with sync_playwright() as p:
     # Loop
     while True:
         # Run JS in page to pick the newest guessed country and the info box
-        value = page.evaluate("() => window.localStorage.getItem('submittedCountries')")
-        print(f'This is VALUE : {value}')
-        ex_val = str(value)
-        ex_val.replace(']', "")
-        ex_val.replace('[', "")
-        ex_val.replace('"', "")
-        print(f'This is EX VALUE : {ex_val}')
+        value = str(page.evaluate("() => window.localStorage.getItem('submittedCountries')"))
+        result = value.replace(']', "").replace('[', "").replace('"', "").replace(',', "")
         if not value:
             print('No country has been submitted yet')
         else:
-            print(f"This is THE VALUE : {value[-1]}")
-            country = pycountry.countries.get(alpha_3=value[-1])
+            country = pycountry.countries.get(alpha_3=result[-3:])
 
-            dt = page.evaluate("""() => {const country_distance = document.querySelector('.answerSquare answer7 badAnswer');
-            const data = country_distance.querySelector('.answerContent')?.innerText.trim();
-            return data}""")
+            sleep(timeout_s)
 
-            print(dt)
-        
+            dt = page.evaluate("""() => {
+            const country_distance = document.querySelector('[class="answerSquare answer7 badAnswer"]');
+            const data = country_distance?.querySelector('.answerContent')?.innerText.trim();
+            return data;
+            }""").replace(" ", "")
+
+            int_dt = int(dt)
+
+            # Using map circle drawing function
+
+            # Trying not to draw infinite circles
+            if result == current:
+                inputed = 1
+            else:
+                inputed = 0
+
+            # Drawing circles on map ONLY if circle has not been drawn in the last guess
+            if inputed > 0:
+                pass
+            elif country is None:
+                pass
+            else:
+                my_country = country.__dict__
+                name = my_country.get("_fields", {}).get("name")
+                draw_country_circle(name, int_dt)
+                inputed += 1
+        current = result
+      
