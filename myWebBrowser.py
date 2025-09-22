@@ -1,14 +1,15 @@
 from playwright.sync_api import sync_playwright
 import pycountry
-from time import *
+from time import sleep
 from testing_folium import add_country_circle
 import pathlib
 import os
 
 # Resetting STATE Files
-os.remove("circles.json")
+if os.path.exists("circles.json"):
+    os.remove("circles.json")
 
-# Setting up constants
+# Constants
 URL = "https://countryguessr.mrdo.fr"
 refresh_timeout_ms = 2000
 timeout_s = 1
@@ -17,19 +18,23 @@ current = None
 print("Launching Chromium...")
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=False) 
-    page = browser.new_page() # Launching Chromium
-    page.add_init_script("""
-    localStorage.setItem("isFirstTime", "True");
-    """) # Adding cookies to fake being a customed user
-    page.goto(URL) # Going to countryguessr
 
-    # wait for the page to populate (adjust selector)
+    # --- Tab 1: Game ---
+    page = browser.new_page()
+    page.add_init_script("""localStorage.setItem("isFirstTime", "True");""")
+    page.goto(URL)
     page.wait_for_selector("h1", timeout=refresh_timeout_ms)
-    # Loop
+
+    # --- Tab 2: Map ---
+    filepath = pathlib.Path("map.html").resolve()
+    map_page = browser.new_page()
+    map_page.goto(f"file://{filepath}")
+
+    # --- Loop ---
     while True:
-        # Run JS in page to pick the newest guessed country and the info box
         value = str(page.evaluate("() => window.localStorage.getItem('submittedCountries')"))
         result = value.replace(']', "").replace('[', "").replace('"', "").replace(',', "")
+
         if not value:
             print('No country has been submitted yet')
         else:
@@ -38,40 +43,22 @@ with sync_playwright() as p:
             sleep(timeout_s)
 
             dt = page.evaluate("""() => {
-            const country_distance = document.querySelector('[class="answerSquare answer7 badAnswer"]');
-            const data = country_distance?.querySelector('.answerContent')?.innerText.trim();
-            return data;
+                const country_distance = document.querySelector('[class="answerSquare answer7 badAnswer"]');
+                const data = country_distance?.querySelector('.answerContent')?.innerText.trim();
+                return data;
             }""")
 
-            if country is None:
-                pass
-            else:
+            if country:
                 str_dt = str(dt).replace(' ', "")
-
                 int_dt = int(str_dt)
 
-                # Using map circle drawing function
+                # Prevent duplicate circles
+                if result != current:
+                    name = getattr(country, "name", None)
+                    if name:
+                        add_country_circle(name, int_dt)
 
-                # Trying not to draw infinite circles
-                if result == current:
-                    inputed = 1
-                else:
-                    inputed = 0
+                        # Refresh map tab instead of creating a new one
+                        map_page.reload()
 
-                # Drawing circles on map ONLY if circle has not been drawn in the last guess
-                if inputed > 0:
-                    pass
-                else:
-                    my_country = country.__dict__
-                    name = my_country.get("_fields", {}).get("name")
-                    add_country_circle(name, int_dt)
-
-                    # Get absolute path
-                    filepath = pathlib.Path("map.html").resolve()
-                    map_page = browser.new_page()
-                    map_page.goto(f"file://{filepath}")
-
-                    # Iterating over
-                    inputed += 1
         current = result
-      
