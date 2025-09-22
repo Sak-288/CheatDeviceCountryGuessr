@@ -13,9 +13,10 @@ if os.path.exists("map.html"):
 
 # Constants
 URL = "https://countryguessr.mrdo.fr"
-refresh_timeout_ms = 2000
+refresh_timeout_ms = 5000
 timeout_s = 1
 current = None
+open("map.html", "w").close()
 
 print("Launching Chromium...")
 with sync_playwright() as p:
