@@ -1,30 +1,43 @@
-import folium
-from geopy.geocoders import Nominatim
+def add_country_circle(country_name, distance_km):
+    import folium
+    import json
+    from geopy.geocoders import Nominatim
+    from pathlib import Path
+    import random as rd
 
-def draw_country_circle(country_name, distance_km, output_file="map.html"):
-    # Get country center (lat, lon)
     geolocator = Nominatim(user_agent="country_center")
-    location = geolocator.geocode(country_name)
-    if not location:
-        raise ValueError(f"Could not find country: {country_name}")
+    STATE_FILE = Path("circles.json")
 
-    lat, lon = location.latitude, location.longitude
+    # Load previous state
+    if STATE_FILE.exists():
+        with open(STATE_FILE, "r", encoding="utf-8") as f:
+            circles = json.load(f)
+    else:
+        circles = []
 
-    # Create map centered on country
-    m = folium.Map(location=[lat, lon], zoom_start=4)
+    # Append new circle
+    circles.append({"country": country_name, "distance": distance_km})
 
-    # Add circle with given radius
-    folium.Circle(
-        location=[lat, lon],
-        radius=distance_km * 1000,  # folium uses meters
-        color="red",
-        fill=True,
-        fill_opacity=0.2,
-    ).add_to(m)
+    # Save state back
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(circles, f, indent=2)
 
-    # Add marker for country center
-    folium.Marker([lat, lon], popup=country_name).add_to(m)
+    # Rebuild map
+    m = folium.Map(location=[20, 0], zoom_start=2)
 
-    # Save to HTML
-    m.save(output_file)
-    print(f"Map saved to {output_file}")
+    for c in circles:
+        location = geolocator.geocode(c["country"])
+        if not location:
+            continue
+        folium.Circle(
+            location=[location.latitude, location.longitude],
+            radius=c["distance"] * 1000,
+            color=f"rgb({rd.randint(0, 255)}, {rd.randint(0, 255)}, {rd.randint(0, 255)})",
+            fill=True,
+            fill_opacity=0.2,
+        ).add_to(m)
+        folium.Marker([location.latitude, location.longitude], popup=c["country"]).add_to(m)
+
+    m.save("map.html")
+    print(f"✅ Added {country_name} ({distance_km} km). Map updated.")
+

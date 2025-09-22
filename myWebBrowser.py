@@ -1,12 +1,17 @@
 from playwright.sync_api import sync_playwright
 import pycountry
 from time import *
-from testing_folium import draw_country_circle
+from testing_folium import add_country_circle
+import pathlib
+import os
+
+# Resetting STATE Files
+os.remove("circles.json")
 
 # Setting up constants
 URL = "https://countryguessr.mrdo.fr"
 refresh_timeout_ms = 2000
-timeout_s = 2
+timeout_s = 1
 current = None
 
 print("Launching Chromium...")
@@ -36,27 +41,37 @@ with sync_playwright() as p:
             const country_distance = document.querySelector('[class="answerSquare answer7 badAnswer"]');
             const data = country_distance?.querySelector('.answerContent')?.innerText.trim();
             return data;
-            }""").replace(" ", "")
+            }""")
 
-            int_dt = int(dt)
-
-            # Using map circle drawing function
-
-            # Trying not to draw infinite circles
-            if result == current:
-                inputed = 1
-            else:
-                inputed = 0
-
-            # Drawing circles on map ONLY if circle has not been drawn in the last guess
-            if inputed > 0:
-                pass
-            elif country is None:
+            if country is None:
                 pass
             else:
-                my_country = country.__dict__
-                name = my_country.get("_fields", {}).get("name")
-                draw_country_circle(name, int_dt)
-                inputed += 1
+                str_dt = str(dt).replace(' ', "")
+
+                int_dt = int(str_dt)
+
+                # Using map circle drawing function
+
+                # Trying not to draw infinite circles
+                if result == current:
+                    inputed = 1
+                else:
+                    inputed = 0
+
+                # Drawing circles on map ONLY if circle has not been drawn in the last guess
+                if inputed > 0:
+                    pass
+                else:
+                    my_country = country.__dict__
+                    name = my_country.get("_fields", {}).get("name")
+                    add_country_circle(name, int_dt)
+
+                    # Get absolute path
+                    filepath = pathlib.Path("map.html").resolve()
+                    map_page = browser.new_page()
+                    map_page.goto(f"file://{filepath}")
+
+                    # Iterating over
+                    inputed += 1
         current = result
       
