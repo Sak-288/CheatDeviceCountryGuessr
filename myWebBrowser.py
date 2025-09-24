@@ -46,7 +46,7 @@ with sync_playwright() as p:
             sleep(timeout_s)
 
             dt = page.evaluate("""() => {
-                const country_distance = document.querySelector('[class="answerSquare answer7 badAnswer"]');
+                const country_distance = document.querySelector('[class="answerSquare answer7"]');
                 const data = country_distance?.querySelector('.answerContent')?.innerText.trim();
                 return data;
             }""")
